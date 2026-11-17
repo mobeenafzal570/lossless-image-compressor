@@ -48,7 +48,9 @@ The build uses internet access for declared packages, pinned source and upstream
 
 **Lossless compression checks** validates the source on Windows, macOS and Linux. The separate **Build desktop apps** workflow is manually dispatched from the Actions tab and builds Windows x64, Apple silicon macOS arm64 and Intel macOS x64.
 
-Artifacts contain ZIPs and checksum/build-manifest files. Maintainers can attach those ZIPs to a GitHub Release after review. The workflow has read-only repository permissions; it does not publish releases or change repository contents automatically.
+Artifacts contain ZIPs and checksum/build-manifest files. The build workflow has read-only repository permissions and does not publish automatically.
+
+The separate **Publish verified desktop release** workflow accepts a successful build run ID. After a maintainer manually starts it, the release job verifies all three artifacts and their checksums, then creates release `v1.0.0` targeting the built commit. Only that job receives a short-lived repository token with `contents: write` and `actions: read`; no personal token or Chrome local-file access is used. It refuses to replace an existing release. Future versions must update the fixed release version and filenames first.
 
 ## Tests
 
