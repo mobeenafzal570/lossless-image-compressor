@@ -1,0 +1,82 @@
+name: Publish verified desktop release
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful Build desktop apps run ID to publish as v1.0.0
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: desktop-release-v1.0.0
+  cancel-in-progress: false
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BUILD_RUN_ID: ${{ inputs.build_run_id }}
+    steps:
+      - name: Validate successful native build, verify artifacts, and publish v1.0.0
+        shell: python
+        run: |
+          import hashlib, json, os, pathlib, re, shutil, subprocess
+
+          def gh(*args):
+              return subprocess.check_output(['gh', *args], text=True).strip()
+
+          run_id = os.environ['BUILD_RUN_ID']
+          if not re.fullmatch(r'[0-9]+', run_id):
+              raise RuntimeError('Build run ID must be numeric')
+          repo = os.environ['GH_REPO']
+          run = json.loads(gh('api', f'repos/{repo}/actions/runs/{run_id}'))
+          if not (run['name'] == 'Build desktop apps' and run['event'] == 'workflow_dispatch'
+                  and run['head_branch'] == 'main' and run['conclusion'] == 'success'
+                  and run['head_repository']['full_name'] == repo):
+              raise RuntimeError('Expected a successful manual native build from this repository/main')
+          sha = run['head_sha']
+          if not re.fullmatch(r'[0-9a-f]{40}', sha):
+              raise RuntimeError('Invalid build commit')
+          gh('run', 'download', run_id, '--pattern', 'desktop-*', '--dir', 'artifacts')
+          output = pathlib.Path('release-assets')
+          output.mkdir()
+          expected = {'windows-x64', 'macos-arm64', 'macos-x64'}
+          roots = list(pathlib.Path('artifacts').iterdir())
+          if {p.name for p in roots} != {'desktop-' + label for label in expected}:
+              raise RuntimeError('Expected all three native build artifacts')
+          for label in sorted(expected):
+              root = pathlib.Path('artifacts') / ('desktop-' + label)
+              base = f'Lossless-Image-Compressor-1.0.0-{label}'
+              archive = root / (base + '.zip')
+              manifest = root / (base + '.build.json')
+              checksum = root / (base + '.zip.sha256')
+              data = json.loads(manifest.read_text())
+              digest = hashlib.sha256(archive.read_bytes()).hexdigest()
+              if not (data['version'] == '1.0.0' and data['platform'] == label
+                      and data['archive'] == archive.name and data['sha256'] == digest
+                      and data['packagedSmokeTest'] == 'passed' and data['decodedPixelChecks'] == 2
+                      and checksum.read_text().strip() == digest + '  ' + archive.name):
+                  raise RuntimeError('Artifact verification failed: ' + label)
+              for source in [archive, manifest, checksum]:
+                  shutil.copy2(source, output / source.name)
+          notes = pathlib.Path('release-notes.md')
+          notes.write_text('''Drag images or folders into the window, choose an output folder, and click **Compress images**. No Python or terminal is needed.
+
+          - Windows x64: Windows 10 (1809+) or Windows 11. Extract the whole ZIP and open **Lossless Image Compressor.exe** inside its folder.
+          - macOS arm64: Apple silicon Macs, macOS 14.4+.
+          - macOS x64: Intel Macs, macOS 14.4+.
+          - Mac users: extract the ZIP and move the app to Applications.
+
+          Local/offline processing, bundled lossless PNG/JPEG optimization, progress, cancellation, results, and optional reports. Originals and existing outputs are preserved. Some images are already optimized and will not shrink; unsupported formats are copied unchanged.
+
+          These builds are unsigned (Mac: ad-hoc signing, without Apple notarization), so the operating system may require first-launch approval. See the Windows and Mac guides in the repository. Each ZIP has a SHA-256 checksum and build manifest. All 51 checks and actual packaged PNG/JPEG pixel checks passed on each target.
+          ''' + f'\nBuild run: https://github.com/{repo}/actions/runs/{run_id}\nSource commit: {sha}\n')
+          assets = sorted(str(p) for p in output.iterdir())
+          print(gh('release', 'create', 'v1.0.0', *assets, '--target', sha,
+                   '--title', 'v1.0.0 — Drag-and-drop desktop compressor', '--notes-file', str(notes)))
