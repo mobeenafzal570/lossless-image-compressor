@@ -50,7 +50,7 @@ The build uses internet access for declared packages, pinned source and upstream
 
 Artifacts contain ZIPs and checksum/build-manifest files. The build workflow has read-only repository permissions and does not publish automatically.
 
-The separate **Publish verified desktop release** workflow accepts a successful build run ID. After a maintainer manually starts it, the release job verifies all three artifacts and their checksums, then creates release `v1.0.0` targeting the built commit. Only that job receives a short-lived repository token with `contents: write` and `actions: read`; no personal token or Chrome local-file access is used. It refuses to replace an existing release. Future versions must update the fixed release version and filenames first.
+The separate **Publish verified desktop release** workflow accepts a successful build run ID. First create the public `v1.0.0` release in GitHub's release editor, targeting that build's exact commit. After a maintainer manually starts the workflow, its release job verifies all three artifacts and their checksums, verifies that the lightweight tag points to the built commit, and attaches the downloads. Only that job receives a short-lived repository token with `contents: write` and `actions: read`; no personal token or Chrome local-file access is used. It refuses to upload if the release already has assets and never replaces existing files. Future versions must update the fixed release version and filenames first.
 
 ## Tests
 
