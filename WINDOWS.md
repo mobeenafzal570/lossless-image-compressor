@@ -1,87 +1,44 @@
-# Windows guide
+# Windows guide — no terminal needed
 
-## 1. Install Python and download the script
+## Download and open
 
-Install a current Python 3 release from [python.org](https://www.python.org/downloads/windows/). Open PowerShell and check:
+1. Open the project's [Releases page](https://github.com/mobeenafzal570/lossless-image-compressor/releases/latest).
+2. Download **Lossless-Image-Compressor-1.0.0-windows-x64.zip** for Windows 10 (1809+) or Windows 11 on a 64-bit Intel/AMD computer.
+3. In File Explorer, right-click the ZIP and choose **Extract All**.
+4. Open the extracted **Lossless Image Compressor** folder and double-click **Lossless Image Compressor.exe**.
 
-```powershell
-py -3 --version
-```
+Keep the whole folder together, including `_internal`, which contains bundled libraries. You do not need Python, pip, PowerShell or a separate JPEG tool. These builds are unsigned, so Windows may ask for first-launch approval.
 
-If your installation provides `python` instead of `py`, use `python` for the commands below. If neither works, complete Python's installer setup and reopen PowerShell.
+## Compress images
 
-On this repository's GitHub page, choose **Code → Download ZIP**. Extract the ZIP. Open its extracted folder in File Explorer, click the address bar, type `powershell`, and press Enter. Check that the script is there:
+1. Drag images or folders from File Explorer into the drop area. Alternatively use **Add images…** or **Add folder…**.
+2. Review the **Images** tab. Use **Remove selected** or **Clear** if needed.
+3. Beside **Save to**, click **Choose folder…** and select a separate destination outside the input folders.
+4. Leave **Include subfolders** checked if you want nested images too.
+5. Click **Compress images** and review the **Results** tab.
+6. Click **Open output folder** when finished.
 
-```powershell
-Get-ChildItem compress_images.py
-py -3 compress_images.py --help
-```
+Original images are never overwritten. Folder selections keep their hierarchy under the destination. Duplicate filenames receive a numbered name, overlapping selections are processed once, and existing outputs are skipped.
 
-PNG compression needs no pip packages or additional software.
+## Read the results
 
-## 2. Compress an image or folder
+- **Compressed:** a smaller, verified lossless result was saved.
+- **Already optimized · copied:** an exact copy was saved because no smaller encoding was found.
+- **Animation preserved · copied:** an animated PNG was copied unchanged.
+- **Format preserved · copied:** GIF, WebP, BMP, TIFF, AVIF or HEIC was copied; this version does not optimize that format.
+- **Already exists · skipped:** choose a fresh output folder to process it again.
+- **Could not process:** hover over the row for its reason. Originals remain untouched.
 
-One PNG:
+Static PNGs and JPEGs are optimized without resizing or reducing quality. Already compressed images may not shrink further.
 
-```powershell
-py -3 compress_images.py "C:\Users\YourName\Pictures\photo.png" --output "C:\Users\YourName\Pictures\compressed"
-```
+## Cancel, reports and troubleshooting
 
-All recognized images in a folder and its subfolders:
+**Cancel** stops safely after the current image finishes. Completed outputs stay in the destination.
 
-```powershell
-py -3 compress_images.py "C:\Users\YourName\Pictures\input" --output "C:\Users\YourName\Pictures\compressed" --recursive
-```
+**Save report…** exports a local JSON summary. Choose a new filename. Reports can include image paths; the app does not upload them.
 
-Replace `YourName` and the example directories with your own paths. Keep the output outside the input directory. Originals stay in `input`, and outputs keep their relative filenames and subfolders. Existing outputs are skipped.
+If output overlaps an input, choose another folder. For a permissions error, select a writable folder under your user account. If an organization's app policy blocks unsigned software, ask its administrator to review the build.
 
-## 3. Preview or save a report
+## Developers and automation
 
-```powershell
-py -3 compress_images.py "C:\Pictures\input" -o "C:\Pictures\compressed" -r --dry-run
-py -3 compress_images.py "C:\Pictures\input" -o "C:\Pictures\compressed" -r --report "report.json"
-```
-
-Dry run creates no files. Use a new report filename for each run. If an output already exists, choose a fresh output directory to process it again.
-
-## 4. Optional JPEG compression
-
-Obtain the Windows binary package for your computer from the [official libjpeg-turbo downloads](https://github.com/libjpeg-turbo/libjpeg-turbo/releases). Follow its installer and locate `jpegtran.exe` in its `bin` directory.
-
-The libjpeg-turbo Project documents a typical Visual C++ x64 installation under `C:\libjpeg-turbo64`; your selected directory may differ. [Official installation directories](https://libjpeg-turbo.org/Documentation/OfficialBinaries).
-
-Check the executable, then point the script at it:
-
-```powershell
-& "C:\libjpeg-turbo64\bin\jpegtran.exe" -version
-py -3 compress_images.py "C:\Pictures\input" -o "C:\Pictures\compressed" -r --jpegtran "C:\libjpeg-turbo64\bin\jpegtran.exe"
-```
-
-Without `--jpegtran`, JPEGs are copied unchanged and labeled `kept_jpegtran_not_configured`. With it, only smaller results that pass the invariant checks are used. The script never adjusts JPEG quality, dimensions or colors.
-
-## 5. Read the result
-
-- `optimized_png` / `optimized_jpeg`: a smaller result was written.
-- `kept_not_smaller`: an exact copy was written because the candidate was not smaller.
-- `kept_animated_png` / `kept_unsupported_format`: an exact copy was written; this format is not optimized.
-- `skipped_existing`: a destination already existed and was left alone.
-- `error`: that file failed; inspect its message or the report. An error does not modify the original.
-
-For “input does not exist,” check the quoted path. For “output directory outside the input,” choose a sibling directory. For permissions errors, choose a writable folder such as your Pictures folder. For a JPEG backend error, check its executable path with the `-version` command above.
-
-## Optional development tests
-
-Using Python 3.11 or later:
-
-```powershell
-py -3 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-.\.venv\Scripts\python.exe -m unittest -v
-```
-
-No PowerShell activation or execution-policy change is required. To enable real JPEG tests in that session:
-
-```powershell
-$env:JPEGTRAN_BIN = "C:\libjpeg-turbo64\bin\jpegtran.exe"
-.\.venv\Scripts\python.exe -m unittest -v
-```
+The original script remains available. See [BUILDING.md](BUILDING.md) and the README's [command-line section](README.md#optional-command-line-usage) for source setup, builds and automation.
