@@ -26,7 +26,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libjpeg-turbo-progs
+          sudo apt-get install -y libjpeg-turbo-progs libegl1
           echo 'JPEGTRAN_BIN=/usr/bin/jpegtran' >> "$GITHUB_ENV"
       - name: Run format, filesystem, and independent pixel checks
         run: python -m unittest -v
