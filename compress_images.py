@@ -231,7 +231,8 @@ def optimize_jpeg(data, executable=None):
     try:
         process = subprocess.run([str(executable), "-copy", "all", "-optimize"],
                                  input=data, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                 timeout=60, check=False)
+                                 timeout=60, check=False,
+                                 creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
     except (OSError, subprocess.TimeoutExpired) as error:
         raise ValueError("jpegtran could not run: {}".format(error)) from error
     if process.returncode:
