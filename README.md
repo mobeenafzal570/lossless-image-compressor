@@ -2,16 +2,32 @@
 
 [![Lossless compression checks](https://github.com/mobeenafzal570/lossless-image-compressor/actions/workflows/ci.yml/badge.svg)](https://github.com/mobeenafzal570/lossless-image-compressor/actions/workflows/ci.yml)
 
-An offline Python script that reduces image file sizes **without resizing, quantizing colors, or applying lossy re-encoding**. Originals are never overwritten. A candidate is used only when it passes its format checks and is smaller; otherwise the original bytes are copied to the output.
+An offline desktop app and Python script that reduce image file sizes **without resizing, quantizing colors, or applying lossy re-encoding**. Originals are never overwritten. A candidate is used only when it passes its format checks and is smaller; otherwise the original bytes are copied to the output.
 
-**Guides:** [Windows / PowerShell](WINDOWS.md) · [macOS / Terminal](MACOS.md)
+**Guides:** [Windows](WINDOWS.md) · [macOS](MACOS.md)
+
+## Desktop app — no terminal or Python installation
+
+Get the app from [Releases](https://github.com/mobeenafzal570/lossless-image-compressor/releases/latest):
+
+| Computer | Download |
+| --- | --- |
+| Windows 10 (1809+) or Windows 11, 64-bit | `Lossless-Image-Compressor-1.0.0-windows-x64.zip` |
+| Apple silicon Mac, macOS 14.4+ | `Lossless-Image-Compressor-1.0.0-macos-arm64.zip` |
+| Intel Mac, macOS 14.4+ | `Lossless-Image-Compressor-1.0.0-macos-x64.zip` |
+
+Extract the download, open **Lossless Image Compressor**, and drag images or folders into the window. You can also use **Add images** or **Add folder**. Choose an output folder and click **Compress images**.
+
+The app includes Python and the lossless JPEG helper. It offers progress, readable per-image results, safe cancellation after the current image, **Open output folder**, and optional report export. Duplicate filenames are disambiguated; overlapping selections are processed once. Existing outputs remain untouched.
+
+Desktop builds are unsigned (locally ad-hoc signed on macOS) and are not notarized. Your operating system may ask for approval on first launch. For build details, checksums, dependencies and developer instructions, see [BUILDING.md](BUILDING.md).
 
 ## What it does
 
 | Format | Behavior |
 | --- | --- |
 | Static PNG | Recompresses existing filtered image data with several zlib strategies. Verifies exact scanline-byte equality and preserves every non-IDAT chunk byte for byte. |
-| JPEG | Optional `jpegtran -copy all -optimize` repacks the existing JPEG representation. Frame headers, quantization tables, and APP/COM metadata must remain equal. |
+| JPEG | The desktop app bundles `jpegtran`; the CLI accepts it optionally. `jpegtran -copy all -optimize` repacks the existing representation. Frame headers, quantization tables, and APP/COM metadata must remain equal. |
 | JPEG without configured jpegtran | Copies the file unchanged and reports `kept_jpegtran_not_configured`. |
 | Animated PNG | Copies the entire file unchanged to preserve animation. |
 | GIF, WebP, BMP, TIFF, AVIF, HEIC | Copies unchanged. These formats are not optimized by this version. |
@@ -20,7 +36,7 @@ Transparency, dimensions, bit depth, palette data, color-profile chunks, orienta
 
 Already optimized images may not shrink. Lossless compression cannot promise a particular reduction or recover detail missing from an already lossy image.
 
-## Quick start
+## Optional command-line usage
 
 Download this repository with **Code → Download ZIP**, extract it, and open a terminal in its folder. The script itself uses only Python's standard library. Use a current Python 3 release; its syntax is compatible with Python 3.9+.
 
@@ -76,6 +92,8 @@ python3 -m unittest -v
 ```
 
 GitHub Actions runs the core checks and independent PNG decoding checks on Windows, macOS and Linux. Linux additionally installs `jpegtran` and checks real JPEG size reduction and decoded pixel equality, including progressive images and metadata. Set `JPEGTRAN_BIN` locally to enable those JPEG integration tests. Missing optional test dependencies are explicitly marked as skipped.
+
+Desktop checks add real Qt drag/drop events, Unicode/spaced paths, duplicate selections, name collisions, background-worker results, responsive cancellation and output-folder validation. Native packaging builds its own pinned JPEG helper, runs the full suite, and then launches the actual packaged app to compress two synthetic fixtures and verify decoded pixels. Desktop artifacts are built on Windows, Apple silicon macOS and Intel macOS; they are not cross-compiled.
 
 Coverage includes PNG CRCs, RGB/RGBA and invisible transparent pixels, palette transparency, 16-bit grayscale, Adam7 interlacing, ICC/Exif/text/resolution preservation, animated PNG passthrough, JPEG invariants, corrupt inputs, resource limits, overwrite protection, symlinks, recursive folders, reports, and dry runs. All fixtures are synthetic; no personal images are included.
 
