@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       build_run_id:
-        description: Successful Build desktop apps run ID to publish as v1.0.0
+        description: Successful Build desktop apps run ID to attach to existing v1.0.0 release
         required: true
         type: string
 permissions:
@@ -23,7 +23,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       BUILD_RUN_ID: ${{ inputs.build_run_id }}
     steps:
-      - name: Validate successful native build, verify artifacts, and publish v1.0.0
+      - name: Validate native build and attach verified downloads to v1.0.0
         shell: python
         run: |
           import hashlib, json, os, pathlib, re, shutil, subprocess
@@ -65,18 +65,12 @@ jobs:
                   raise RuntimeError('Artifact verification failed: ' + label)
               for source in [archive, manifest, checksum]:
                   shutil.copy2(source, output / source.name)
-          notes = pathlib.Path('release-notes.md')
-          notes.write_text('''Drag images or folders into the window, choose an output folder, and click **Compress images**. No Python or terminal is needed.
-
-          - Windows x64: Windows 10 (1809+) or Windows 11. Extract the whole ZIP and open **Lossless Image Compressor.exe** inside its folder.
-          - macOS arm64: Apple silicon Macs, macOS 14.4+.
-          - macOS x64: Intel Macs, macOS 14.4+.
-          - Mac users: extract the ZIP and move the app to Applications.
-
-          Local/offline processing, bundled lossless PNG/JPEG optimization, progress, cancellation, results, and optional reports. Originals and existing outputs are preserved. Some images are already optimized and will not shrink; unsupported formats are copied unchanged.
-
-          These builds are unsigned (Mac: ad-hoc signing, without Apple notarization), so the operating system may require first-launch approval. See the Windows and Mac guides in the repository. Each ZIP has a SHA-256 checksum and build manifest. All 51 checks and actual packaged PNG/JPEG pixel checks passed on each target.
-          ''' + f'\nBuild run: https://github.com/{repo}/actions/runs/{run_id}\nSource commit: {sha}\n')
+          tag = json.loads(gh('api', f'repos/{repo}/git/ref/tags/v1.0.0'))
+          if tag['object']['type'] != 'commit' or tag['object']['sha'] != sha:
+              raise RuntimeError('Create a lightweight v1.0.0 tag at the verified build commit first')
+          release = json.loads(gh('api', f'repos/{repo}/releases/tags/v1.0.0'))
+          if release['draft'] or release['assets']:
+              raise RuntimeError('Expected an existing public v1.0.0 release without attached assets')
           assets = sorted(str(p) for p in output.iterdir())
-          print(gh('release', 'create', 'v1.0.0', *assets, '--target', sha,
-                   '--title', 'v1.0.0 — Drag-and-drop desktop compressor', '--notes-file', str(notes)))
+          print(gh('release', 'upload', 'v1.0.0', *assets))
+          print(release['html_url'])
