@@ -1,90 +1,54 @@
-# macOS guide
+# macOS guide — no terminal needed
 
-## 1. Install Python and download the script
+## Pick the right download
 
-Check Python in Terminal:
+Open **Apple menu → About This Mac**:
 
-```sh
-python3 --version
-```
+- An Apple chip: choose **Lossless-Image-Compressor-1.0.0-macos-arm64.zip**.
+- An Intel processor: choose **Lossless-Image-Compressor-1.0.0-macos-x64.zip**.
 
-Use a current Python 3 release from [python.org](https://www.python.org/downloads/macos/) if you need to install or update it. PNG compression uses only the standard library and does not need pip packages.
+These builds require macOS 14.4 or later. Download from the project's [Releases page](https://github.com/mobeenafzal570/lossless-image-compressor/releases/latest), rather than GitHub's automatic source-code archive.
 
-On the repository's GitHub page, choose **Code → Download ZIP** and extract it. In Terminal, change to the extracted folder. Adjust the path if you extracted it elsewhere:
+## Open the app
 
-```sh
-cd "$HOME/Downloads/lossless-image-compressor-main"
-python3 compress_images.py --help
-```
+1. Double-click the ZIP in Finder to extract it.
+2. Move **Lossless Image Compressor.app** into Applications if you want to keep it installed.
+3. Double-click the app.
 
-## 2. Compress an image or folder
+Python and the lossless JPEG helper are included. You do not need Terminal, Homebrew, pip or a separate JPEG installation.
 
-One PNG:
+The builds do not have an Apple Developer ID signature or notarization. macOS may require your explicit first-launch approval through its normal app-approval controls in **System Settings → Privacy & Security**. Review the source and release checksums before deciding whether to trust an unsigned build.
 
-```sh
-python3 compress_images.py "$HOME/Pictures/photo.png" --output "$HOME/Pictures/compressed"
-```
+## Compress images
 
-A folder including subfolders:
+1. Drag images or folders from Finder into the drop area. You can also use **Add images…** or **Add folder…**.
+2. Review the **Images** tab and remove selections you do not need.
+3. Click **Choose folder…** beside **Save to** and select a separate destination outside the input folders.
+4. Keep **Include subfolders** enabled to include nested images.
+5. Click **Compress images** and review **Results**.
+6. Click **Open output folder** when finished.
 
-```sh
-python3 compress_images.py "$HOME/Pictures/input" --output "$HOME/Pictures/compressed" --recursive
-```
+The app preserves originals, metadata, dimensions and pixel quality. It keeps folder hierarchy, disambiguates duplicate filenames, processes overlapping selections once and skips existing outputs.
 
-Keep the output outside the input directory. `input` and `compressed` are sibling directories in these examples. Originals stay untouched, and output paths retain their relative filenames and subfolders. Quote paths with spaces.
+## Understand the results
 
-## 3. Preview or save a report
+- **Compressed:** a smaller, verified lossless result was saved.
+- **Already optimized · copied:** an exact copy was saved because no smaller encoding was found.
+- **Animation preserved · copied:** an animated PNG was copied unchanged.
+- **Format preserved · copied:** GIF, WebP, BMP, TIFF, AVIF or HEIC was copied without optimization.
+- **Already exists · skipped:** choose a fresh output folder to process it again.
+- **Could not process:** hover over the row for its error. Originals stay untouched.
 
-```sh
-python3 compress_images.py "$HOME/Pictures/input" -o "$HOME/Pictures/compressed" -r --dry-run
-python3 compress_images.py "$HOME/Pictures/input" -o "$HOME/Pictures/compressed" -r --report "report.json"
-```
+PNG and JPEG size reduction varies. Already efficiently compressed images may not get smaller.
 
-Dry run creates no files. Reports and existing image outputs are not overwritten; use a fresh report name or output directory for another run.
+## Cancel and reports
 
-## 4. Optional JPEG compression
+**Cancel** stops after the current image, leaving completed outputs in place.
 
-If you use [Homebrew](https://brew.sh/), its [jpeg-turbo formula](https://formulae.brew.sh/formula/jpeg-turbo) provides `jpegtran`:
+**Save report…** exports a local JSON summary to a new filename. It may contain image paths and is never uploaded automatically.
 
-```sh
-brew install jpeg-turbo
-"$(brew --prefix jpeg-turbo)/bin/jpegtran" -version
-python3 compress_images.py "$HOME/Pictures/input" -o "$HOME/Pictures/compressed" -r --jpegtran "$(brew --prefix jpeg-turbo)/bin/jpegtran"
-```
+If output overlaps an input, choose another destination. If macOS requests normal folder access, grant only the access appropriate for your own images. If device policies block unsigned software, ask the administrator to review the build.
 
-These commands discover Homebrew's prefix, so they do not assume an Intel or Apple Silicon installation path.
+## Developers and automation
 
-Alternatively, obtain the correct macOS package from the [official libjpeg-turbo downloads](https://github.com/libjpeg-turbo/libjpeg-turbo/releases), following its platform compatibility notes. The official package commonly installs programs under `/opt/libjpeg-turbo/bin`; check the directory used by your package. [Official installation directories](https://libjpeg-turbo.org/Documentation/OfficialBinaries).
-
-```sh
-/opt/libjpeg-turbo/bin/jpegtran -version
-python3 compress_images.py "$HOME/Pictures/input" -o "$HOME/Pictures/compressed" -r --jpegtran "/opt/libjpeg-turbo/bin/jpegtran"
-```
-
-Without this option, JPEGs are copied unchanged. With it, the script uses a smaller JPEG result only if the frame, quantization, and metadata checks pass. It does not reduce JPEG quality or resize the image.
-
-## 5. Read the result
-
-- `optimized_png` / `optimized_jpeg`: a smaller result was written.
-- `kept_not_smaller`: the unchanged original was copied because no smaller verified result was found.
-- `kept_animated_png` / `kept_unsupported_format`: the image was copied unchanged.
-- `skipped_existing`: a destination already existed and was left alone.
-- `error`: inspect the file's message or JSON report. Originals are not modified.
-
-If a path is not found, check capitalization and quotation marks. If output is rejected, choose a directory outside the input. If Terminal cannot access a folder, use a folder you can access or grant the normal macOS folder access requested for your own work. No administrator privileges are needed to run the script against your images.
-
-## Optional development tests
-
-Using Python 3.11 or later:
-
-```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install -r requirements-dev.txt
-.venv/bin/python -m unittest -v
-```
-
-With the Homebrew JPEG backend installed, enable the real JPEG integration checks in this terminal session:
-
-```sh
-JPEGTRAN_BIN="$(brew --prefix jpeg-turbo)/bin/jpegtran" .venv/bin/python -m unittest -v
-```
+The original script still supports terminal automation. See [BUILDING.md](BUILDING.md) and the README's [command-line section](README.md#optional-command-line-usage) for source setup, builds and tests.
